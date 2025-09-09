@@ -7,22 +7,39 @@ const shiftGroups = {
   "Full Shift": ["AdminGuy", "PlayerC"]
 };
 
+// Clean FiveM color codes (^1, ^2, etc.)
+function cleanServerName(name) {
+  return name.replace(/\^([0-9])/g, "").trim();
+}
+
 async function loadPlayers() {
   const loader = document.getElementById("loader");
   loader.style.display = "flex";
   try {
     const res = await fetch(`https://servers-frontend.fivem.net/api/servers/single/${serverId}`);
     const data = await res.json();
-    const players = data.Data.players || [];
+    console.log("API response:", data);
 
-    // Set server info in header
+    const players = data.Data?.players || data.players || [];
+
+    // Set server name (cleaned, white, bold)
     const serverTitle = document.getElementById("server-title");
-    serverTitle.textContent = `${data.Data.hostname || "FiveM Server"} (${players.length}/${data.Data.sv_maxclients})`;
+    serverTitle.textContent = cleanServerName(data.Data?.hostname || data.hostname || "FiveM Server");
+
+    // Set player count (right side)
+    const serverCount = document.getElementById("server-count");
+    serverCount.textContent = `(${players.length}/${data.Data?.sv_maxclients || data.sv_maxclients || "?"})`;
+
+    // Set server icon if available
+    if (data.Data?.icon) {
+      const logo = document.getElementById("server-logo");
+      logo.src = `data:image/png;base64,${data.Data.icon}`;
+    }
 
     renderPlayers(players);
     renderOffline(players);
   } catch (err) {
-    console.error(err);
+    console.error("Error loading players:", err);
     document.getElementById("players-table").innerHTML = "<tr><td colspan='4'>Failed to load players.</td></tr>";
   } finally {
     loader.style.display = "none";
