@@ -31,25 +31,43 @@ body {
     position: relative;
 }
 
+/* --- Header --- */
 header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     background: var(--header-bg);
+    padding: 0 24px;
 }
 
 #title {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 16px 24px;
+    padding: 16px 0;
     font-size: 24px;
     flex-grow: 1;
 }
 
-header img {
+#server-logo {
     width: 64px;
+    height: 64px;
+    object-fit: contain;
 }
 
+#server-title {
+    font-size: 28px;
+    font-weight: bold;
+    color: white; /* always white */
+}
+
+#server-count {
+    font-size: 20px;
+    font-weight: bold;
+    color: #3498db;
+}
+
+/* --- Search & controls --- */
 input, select {
     background: var(--input-bg);
     border: 0;
@@ -83,6 +101,7 @@ section {
 .icon:hover { background: var(--icon-hover); }
 .icon:active { background: var(--icon-active); }
 
+/* --- Tabs --- */
 .tabs {
     display: flex;
     border-bottom: 1px solid var(--border-color);
@@ -129,17 +148,18 @@ section {
     color: red;
 }
 
+/* --- Footer --- */
 footer {
     text-align: center;
     padding: 16px;
-    font-size: 18px;       /* increase size */
-    color: #FFFFFF;        /* orange text color (you can pick any hex) */
-    font-weight: bold;     /* make it bold */
+    font-size: 18px;
+    color: #f39c12;
+    font-weight: bold;
 }
 
 footer a {
-    color: #FFFFFF;        /* link color */
-    text-decoration: none; /* remove underline */
+    color: #3498db;
+    text-decoration: none;
     font-weight: bold;
 }
 
@@ -147,7 +167,7 @@ footer a:hover {
     text-decoration: underline;
 }
 
-
+/* --- Loader --- */
 .loader {
     display: none;
     position: fixed;
