@@ -14,12 +14,17 @@
     --border-color: #3a3a3a;
 }
 
+html, body {
+    height: 100%; /* full height */
+}
+
 body {
     margin: 0;
     padding: 0;
     background: var(--bg-color);
     display: flex;
     justify-content: center;
+    align-items: stretch;
     color: var(--text-color);
     font-family: 'Mulish', sans-serif;
 }
@@ -28,8 +33,6 @@ body {
     width: 75%;
     background: var(--wrapper-bg);
     min-height: 100vh;
-    position: relative;
-
     display: flex;
     flex-direction: column;
 }
@@ -130,6 +133,7 @@ section {
     border-collapse: collapse;
     margin-top: 10px;
     text-align: center;
+    flex-grow: 1;
 }
 
 .players-table th, .players-table td {
@@ -158,6 +162,7 @@ footer {
     font-size: 18px;
     color: #FFFFFF;
     font-weight: bold;
+    margin-top: auto; /* stick to bottom */
 }
 
 footer a {
