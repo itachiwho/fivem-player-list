@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FiveM Player List</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="wrapper">
+    <header>
+      <div id="title">
+        <img src="logo.png" alt="Server Logo">
+        <span>FiveM Player List</span>
+      </div>
+    </header>
+
+    <section>
+      <div class="controls-wrapper">
+        <input type="text" id="search" placeholder="Search players...">
+        <select id="shift-filter">
+          <option value="all">All Shifts</option>
+          <option value="Shift-1">Shift-1</option>
+          <option value="Shift-2">Shift-2</option>
+          <option value="Full Shift">Full Shift</option>
+        </select>
+      </div>
+      <div class="utility-icons">
+        <div class="icon" onclick="loadPlayers()">
+          🔄 Refresh
+        </div>
+      </div>
+    </section>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="online">Online Players</div>
+      <div class="tab" data-tab="offline">Offline Shift Players</div>
+    </div>
+
+    <div class="tab-content active" id="online">
+      <div id="players-table"></div>
+    </div>
+    <div class="tab-content" id="offline">
+      <div id="offline-table"></div>
+    </div>
+
+    <footer class="table-footer">
+      <p>This page is not affiliated with FiveM or any other server. Created by <a href="https://discord.com/users/665163856145809464" target="_blank">Itachi</a>.</p>
+    </footer>
+  </div>
+
+  <div class="loader" id="loader">
+    <div class="loader-spinner"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
