@@ -51,7 +51,7 @@ function renderPlayers(players) {
       <th>No.</th>
       <th>ID</th>
       <th>Name</th>
-      <th>Shift</th>
+      <th>Role</th>
       <th>Ping</th>
     </tr>`;
   container.innerHTML = header;
@@ -90,7 +90,7 @@ function renderOffline(players) {
   const header = `
     <tr>
       <th>Name</th>
-      <th>Shift</th>
+      <th>Role</th>
       <th>Status</th>
     </tr>`;
   container.innerHTML = header;
