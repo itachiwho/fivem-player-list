@@ -30,12 +30,6 @@ async function loadPlayers() {
     const serverCount = document.getElementById("server-count");
     serverCount.textContent = `(${players.length}/${data.Data?.sv_maxclients || data.sv_maxclients || "?"})`;
 
-    // Set server icon if available
-    if (data.Data?.icon) {
-      const logo = document.getElementById("server-logo");
-      logo.src = `data:image/png;base64,${data.Data.icon}`;
-    }
-
     renderPlayers(players);
     renderOffline(players);
   } catch (err) {
@@ -56,6 +50,7 @@ function renderPlayers(players) {
       <th>No.</th>
       <th>ID</th>
       <th>Name</th>
+      <th>Shift</th>
       <th>Ping</th>
     </tr>`;
   container.innerHTML = header;
@@ -73,13 +68,14 @@ function renderPlayers(players) {
     .forEach((p, i) => {
       let shiftTag = "";
       for (let [shift, names] of Object.entries(shiftGroups)) {
-        if (names.includes(p.name)) shiftTag = `(${shift})`;
+        if (names.includes(p.name)) shiftTag = shift;
       }
       const row = `
         <tr>
           <td>${i + 1}</td>
           <td>${p.id}</td>
-          <td>${p.name} ${shiftTag}</td>
+          <td>${p.name}</td>
+          <td>${shiftTag || "-"}</td>
           <td>${p.ping} ms</td>
         </tr>`;
       container.innerHTML += row;
