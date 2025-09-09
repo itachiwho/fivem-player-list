@@ -4,7 +4,8 @@ const serverId = "8p75gb"; // change this if needed
 const shiftGroups = {
   "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami"],
   "Shift-2": ["ITACHI", "💤"],
-  "Full Shift": ["DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"]
+  "Full Shift": ["DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
+  "Staff": ["AdminGuy", "HelperOne", "ModeratorX"] // <-- add staff list here
 };
 
 // Clean FiveM color codes (^1, ^2, etc.)
