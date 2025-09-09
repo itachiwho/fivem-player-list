@@ -202,3 +202,24 @@ footer a:hover {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+#refresh-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  margin: 10px 0;
+  font-size: 14px;
+  color: #ccc;
+}
+
+#refresh-icon {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+#refresh-icon.spin {
+  transform: rotate(360deg);
+}
