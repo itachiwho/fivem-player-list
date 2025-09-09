@@ -102,17 +102,32 @@ section {
 .tab-content { display: none; padding: 24px; }
 .tab-content.active { display: block; }
 
-.player-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 24px;
+/* --- Table Styles --- */
+.players-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    text-align: center;
 }
 
-.player-row:nth-child(odd) {
+.players-table th, .players-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.players-table tr:nth-child(odd) td {
     background: var(--table-odd);
 }
 
-.offline { color: red; }
+.players-table th {
+    background: var(--header-bg);
+    color: var(--text-secondary);
+    font-weight: bold;
+}
+
+.offline {
+    color: red;
+}
 
 footer {
     text-align: center;
