@@ -132,9 +132,21 @@ section {
 footer {
     text-align: center;
     padding: 16px;
-    font-size: 14px;
-    color: var(--text-secondary);
+    font-size: 18px;       /* increase size */
+    color: #FFFFFF;        /* orange text color (you can pick any hex) */
+    font-weight: bold;     /* make it bold */
 }
+
+footer a {
+    color: #FFFFFF;        /* link color */
+    text-decoration: none; /* remove underline */
+    font-weight: bold;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
 
 .loader {
     display: none;
