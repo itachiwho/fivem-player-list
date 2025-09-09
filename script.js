@@ -15,11 +15,15 @@ async function loadPlayers() {
     const data = await res.json();
     const players = data.Data.players || [];
 
+    // Set server info in header
+    const serverTitle = document.getElementById("server-title");
+    serverTitle.textContent = `${data.Data.hostname || "FiveM Server"} (${players.length}/${data.Data.sv_maxclients})`;
+
     renderPlayers(players);
     renderOffline(players);
   } catch (err) {
     console.error(err);
-    document.getElementById("players-table").innerHTML = "<p>Failed to load players.</p>";
+    document.getElementById("players-table").innerHTML = "<tr><td colspan='4'>Failed to load players.</td></tr>";
   } finally {
     loader.style.display = "none";
   }
@@ -28,6 +32,17 @@ async function loadPlayers() {
 function renderPlayers(players) {
   const container = document.getElementById("players-table");
   container.innerHTML = "";
+
+  // Header row
+  const header = `
+    <tr>
+      <th>No.</th>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Ping</th>
+    </tr>`;
+  container.innerHTML = header;
+
   const search = document.getElementById("search").value.toLowerCase();
   const filter = document.getElementById("shift-filter").value;
 
@@ -37,30 +52,47 @@ function renderPlayers(players) {
       if (filter === "all") return true;
       return shiftGroups[filter]?.includes(p.name);
     })
+    .sort((a, b) => a.id - b.id) // sort by ID ascending
     .forEach((p, i) => {
-      const row = document.createElement("div");
-      row.className = "player-row";
       let shiftTag = "";
       for (let [shift, names] of Object.entries(shiftGroups)) {
         if (names.includes(p.name)) shiftTag = `(${shift})`;
       }
-      row.innerHTML = `<div>${i+1}. [${p.id}] ${p.name} ${shiftTag}</div><div>${p.ping} ms</div>`;
-      container.appendChild(row);
+      const row = `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${p.id}</td>
+          <td>${p.name} ${shiftTag}</td>
+          <td>${p.ping} ms</td>
+        </tr>`;
+      container.innerHTML += row;
     });
 }
 
 function renderOffline(players) {
   const container = document.getElementById("offline-table");
   container.innerHTML = "";
+
+  const header = `
+    <tr>
+      <th>Name</th>
+      <th>Shift</th>
+      <th>Status</th>
+    </tr>`;
+  container.innerHTML = header;
+
   const onlineNames = players.map(p => p.name);
 
   for (let [shift, names] of Object.entries(shiftGroups)) {
     names.forEach(name => {
       if (!onlineNames.includes(name)) {
-        const row = document.createElement("div");
-        row.className = "player-row offline";
-        row.innerHTML = `<div>${name} (${shift})</div><div>🔴 Offline</div>`;
-        container.appendChild(row);
+        const row = `
+          <tr class="offline">
+            <td>${name}</td>
+            <td>${shift}</td>
+            <td>🔴 Offline</td>
+          </tr>`;
+        container.innerHTML += row;
       }
     });
   }
