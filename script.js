@@ -1,5 +1,7 @@
-// === CONFIG (your current CFX code and shift lists) ===
-const serverId = "8p75gb"; // change if needed
+// === CONFIG ===
+const serverId = "8p75gb"; // your CFX code
+const VERCEL_STATUS_URL = "https://fivem-server.vercel.app/status/legacybd";
+const CFX_URL = `https://servers-frontend.fivem.net/api/servers/single/${serverId}`;
 
 const shiftGroups = {
   "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
@@ -15,77 +17,80 @@ function stripColorCodes(name = "") {
 function escapeHtml(s = "") {
   return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
-
-// Build exact-match Sets for each shift (case-sensitive)
 const shiftSets = Object.fromEntries(
   Object.entries(shiftGroups).map(([shift, names]) => [shift, new Set(names)])
 );
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+async function fetchJsonWithTimeout(url, { timeout = 7000, signal } = {}) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(new Error("timeout")), timeout);
+  try {
+    const res = await fetch(url, { cache: "no-store", signal: signal || controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("json")) throw new Error("non-JSON response");
+    return await res.json();
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+// Try vercel → fallback to CFX
+async function getServerSnapshot() {
+  // small retry/backoff helper
+  const attempt = async (fn) => {
+    const tries = [0, 500, 1000]; // immediate, 0.5s, 1s
+    let lastErr;
+    for (const delay of tries) {
+      if (delay) await new Promise(r => setTimeout(r, delay));
+      try { return await fn(); } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  };
+
+  // 1) Try vercel wrapper (often handles CORS and is stable)
+  try {
+    const j = await attempt(() => fetchJsonWithTimeout(VERCEL_STATUS_URL, { timeout: 7000 }));
+    // normalize
+    const players = j.players || j.data?.players || j.Data?.players || [];
+    const hostname = j.hostname || j.data?.hostname || j.Data?.hostname || "FiveM Server";
+    const max = j.maxPlayers || j.slots || j.data?.sv_maxclients || j.Data?.sv_maxclients ||
+                j.vars?.sv_maxclients || j.vars?.svMaxClients || "?";
+    if (!Array.isArray(players)) throw new Error("vercel: players not array");
+    return { players, hostname, max, raw: j, source: "vercel" };
+  } catch (_) {
+    // 2) Fallback to CFX
+    const j = await fetchJsonWithTimeout(CFX_URL, { timeout: 7000 });
+    const d = j?.Data ?? j ?? {};
+    const players = (d.players ?? []).slice();
+    const hostname = d.hostname || "FiveM Server";
+    const max = d.sv_maxclients ?? d.vars?.sv_maxclients ?? d.vars?.svMaxClients ?? "?";
+    return { players, hostname, max, raw: j, source: "cfx" };
+  }
+}
 
 // === STATE ===
 let lastPlayers = [];
-let lastServerData = null;
-
+let lastMeta = { hostname: "FiveM Server", max: "?" };
 let refreshInterval = 30; // seconds
 let refreshCounter = refreshInterval;
 let refreshTimer;
 
-// === DOM helpers ===
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
-// === FETCH & UPDATE ===
-async function loadPlayers() {
-  const loader = $("#loader");
-  const warning = $("#warning");
-  const icon = $("#refresh-status img");
-
-  try {
-    loader.style.display = "flex";
-    icon?.classList.add("spin");
-
-    const res = await fetch(`https://servers-frontend.fivem.net/api/servers/single/${serverId}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("Network response not ok");
-
-    const data = await res.json();
-    const d = data?.Data ?? data ?? {};
-    const players = (d.players ?? []).slice();
-
-    // sort by id then name for stable order
-    players.sort((a, b) => (a?.id ?? 0) - (b?.id ?? 0) || String(a?.name||"").localeCompare(String(b?.name||"")));
-
-    lastPlayers = players;
-    lastServerData = data;
-
-    if (warning) warning.style.display = "none";
-    updateUI(players, data);
-  } catch (err) {
-    console.error("Error loading players:", err);
-    if (lastPlayers.length) {
-      if (warning) {
-        warning.style.display = "block";
-        warning.textContent = "⚠ Couldn’t update, showing last data";
-      }
-      updateUI(lastPlayers, lastServerData, true);
-    } else {
-      $("#players-table").innerHTML = "<tr><td colspan='5'>⚠ Failed to load players.</td></tr>";
-    }
-  } finally {
-    $("#loader").style.display = "none";
-    icon?.classList.remove("spin");
-    resetRefreshTimer();
-  }
+// === UI HELPERS ===
+function setMeta(hostname, max) {
+  $("#server-title").textContent = stripColorCodes(hostname);
+  $("#server-count").textContent = `(${lastPlayers.length}/${max})`;
 }
-
-function updateUI(players, data, isOld = false) {
-  const d = data?.Data ?? data ?? {};
-
-  $("#server-title").textContent = stripColorCodes(d?.hostname || "FiveM Server");
-
-  const max = d?.sv_maxclients ?? d?.vars?.sv_maxclients ?? d?.vars?.svMaxClients ?? "?";
-  $("#server-count").textContent = `(${players.length}/${max})`;
-
-  renderPlayers();   // render from cached lastPlayers + current filters
-  renderOffline();   // compute offline vs shift lists
+function showWarning(msg) {
+  const w = $("#warning");
+  w.style.display = "block";
+  w.textContent = msg;
+}
+function hideWarning() {
+  const w = $("#warning");
+  w.style.display = "none";
 }
 
 // === RENDER: ONLINE ===
@@ -105,25 +110,17 @@ function renderPlayers() {
 
   const filtered = lastPlayers.filter((p) => {
     const clean = stripColorCodes(p?.name || "");
-    // keep search user-friendly (case-insensitive search text)
     if (searchVal && !clean.toLowerCase().includes(searchVal)) return false;
-
-    if (filter !== "all") {
-      // STRICT role filter: exact (case-sensitive) match in that shift set
-      return shiftSets[filter].has(clean);
-    }
+    if (filter !== "all") return shiftSets[filter].has(clean); // exact match only
     return true;
   });
 
   filtered.forEach((p, i) => {
     const clean = stripColorCodes(p?.name || "");
-
-    // STRICT role detection (exact match only)
     let role = "-";
     for (const [shift, set] of Object.entries(shiftSets)) {
       if (set.has(clean)) { role = shift; break; }
     }
-
     table.insertAdjacentHTML("beforeend", `
       <tr>
         <td>${i + 1}</td>
@@ -149,9 +146,7 @@ function renderOffline() {
       <th>Status</th>
     </tr>`;
 
-  // Build a set of ONLINE names (color codes stripped) — case-sensitive
   const online = new Set(lastPlayers.map((p) => stripColorCodes(p?.name || "")));
-
   for (const [shift, names] of Object.entries(shiftGroups)) {
     for (const name of names) {
       if (!online.has(name)) {
@@ -166,6 +161,45 @@ function renderOffline() {
   }
 }
 
+// === FETCH CYCLE (SWR: keep last good on screen) ===
+async function loadPlayers() {
+  const loader = $("#loader");
+  const icon = $("#refresh-status img");
+
+  try {
+    loader.style.display = "flex";
+    icon?.classList.add("spin");
+
+    const { players, hostname, max } = await getServerSnapshot();
+
+    // sort stable
+    players.sort((a, b) => (a?.id ?? 0) - (b?.id ?? 0) || String(a?.name||"").localeCompare(String(b?.name||"")));
+
+    // update cache & UI
+    lastPlayers = players;
+    lastMeta = { hostname, max };
+    hideWarning();
+    setMeta(hostname, max);
+    renderPlayers();
+    renderOffline();
+  } catch (err) {
+    console.error("Fetch failed:", err);
+    // keep showing last good list; just warn
+    if (lastPlayers.length) {
+      showWarning("⚠ Couldn’t update, showing last data");
+      setMeta(lastMeta.hostname, lastMeta.max);
+      renderPlayers();
+      renderOffline();
+    } else {
+      $("#players-table").innerHTML = "<tr><td colspan='5'>⚠ Failed to load players.</td></tr>";
+    }
+  } finally {
+    loader.style.display = "none";
+    icon?.classList.remove("spin");
+    resetRefreshTimer();
+  }
+}
+
 // === Tabs ===
 $$(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -176,7 +210,7 @@ $$(".tab").forEach((tab) => {
   });
 });
 
-// === Filters: re-render only (no refetch) ===
+// === Filters: re-render only ===
 const debounce = (fn, ms = 150) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 $("#search").addEventListener("input", debounce(renderPlayers, 120));
 $("#shift-filter").addEventListener("change", renderPlayers);
@@ -184,9 +218,11 @@ $("#shift-filter").addEventListener("change", renderPlayers);
 // === Manual refresh ===
 $("#refresh-status").addEventListener("click", () => loadPlayers());
 
-// === Auto refresh ===
+// === Auto refresh (SWR style) ===
+let refreshCounter = 30;
+let refreshTimer;
 function startRefreshTimer() {
-  refreshCounter = refreshInterval;
+  refreshCounter = 30;
   updateRefreshDisplay();
   clearInterval(refreshTimer);
   refreshTimer = setInterval(() => {
