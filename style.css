@@ -97,15 +97,41 @@ section {
     flex-grow: 1;
 }
 
-.icon {
-    padding: 8px 16px;
-    background: var(--icon-bg);
-    border-radius: 4px;
+/* --- Refresh status --- */
+#refresh-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     cursor: pointer;
+    padding: 8px 12px;
+    background: var(--icon-bg);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: background 0.2s;
 }
 
-.icon:hover { background: var(--icon-hover); }
-.icon:active { background: var(--icon-active); }
+#refresh-status:hover {
+    background: var(--icon-hover);
+}
+
+#refresh-status:active {
+    background: var(--icon-active);
+}
+
+#refresh-status img {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.5s ease;
+}
+
+#refresh-status img.spin {
+    transform: rotate(360deg);
+}
+
+#refresh-timer {
+    color: #bbb;
+    font-size: 14px;
+}
 
 /* --- Tabs --- */
 .tabs {
@@ -201,25 +227,4 @@ footer a:hover {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-#refresh-container {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: center;
-  margin: 10px 0;
-  font-size: 14px;
-  color: #ccc;
-}
-
-#refresh-icon {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-#refresh-icon.spin {
-  transform: rotate(360deg);
 }
