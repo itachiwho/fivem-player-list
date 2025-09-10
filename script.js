@@ -1,94 +1,97 @@
-const serverId = "8p75gb"; // change this if needed
+// === CONFIG (your current CFX code and shift lists) ===
+const serverId = "8p75gb"; // change if needed
 
-// Define shift groups
 const shiftGroups = {
   "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
   "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc"],
   "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
-  "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"] // Example staff list
+  "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"]
 };
 
-// Store last good data
+// === UTIL ===
+function stripColorCodes(name = "") {
+  return name.replace(/\^([0-9])/g, "").trim();
+}
+function escapeHtml(s = "") {
+  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+// Build exact-match Sets for each shift (case-sensitive)
+const shiftSets = Object.fromEntries(
+  Object.entries(shiftGroups).map(([shift, names]) => [shift, new Set(names)])
+);
+
+// === STATE ===
 let lastPlayers = [];
 let lastServerData = null;
 
-// Refresh system
 let refreshInterval = 30; // seconds
 let refreshCounter = refreshInterval;
 let refreshTimer;
 
-// Clean FiveM color codes (^1, ^2, etc.)
-function cleanServerName(name) {
-  return name.replace(/\^([0-9])/g, "").trim();
-}
+// === DOM helpers ===
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+// === FETCH & UPDATE ===
 async function loadPlayers() {
-  const loader = document.getElementById("loader");
-  loader.style.display = "flex";
-
-  const warning = document.getElementById("warning");
+  const loader = $("#loader");
+  const warning = $("#warning");
+  const icon = $("#refresh-status img");
 
   try {
-    const res = await fetch(`https://servers-frontend.fivem.net/api/servers/single/${serverId}`);
+    loader.style.display = "flex";
+    icon?.classList.add("spin");
+
+    const res = await fetch(`https://servers-frontend.fivem.net/api/servers/single/${serverId}`, { cache: "no-store" });
     if (!res.ok) throw new Error("Network response not ok");
 
     const data = await res.json();
-    const players = data.Data?.players || data.players || [];
+    const d = data?.Data ?? data ?? {};
+    const players = (d.players ?? []).slice();
 
-    // Always sort players by ID to prevent missing/skipping
-    players.sort((a, b) => a.id - b.id);
+    // sort by id then name for stable order
+    players.sort((a, b) => (a?.id ?? 0) - (b?.id ?? 0) || String(a?.name||"").localeCompare(String(b?.name||"")));
 
-    // Save last good data
     lastPlayers = players;
     lastServerData = data;
 
-    // Clear warning if it was showing
     if (warning) warning.style.display = "none";
-
-    // Update UI
     updateUI(players, data);
-
   } catch (err) {
     console.error("Error loading players:", err);
-
-    // If we have old data, show it + warning
-    if (lastPlayers.length > 0) {
+    if (lastPlayers.length) {
       if (warning) {
         warning.style.display = "block";
         warning.textContent = "⚠ Couldn’t update, showing last data";
       }
       updateUI(lastPlayers, lastServerData, true);
     } else {
-      // If no old data, show error row
-      document.getElementById("players-table").innerHTML =
-        "<tr><td colspan='5'>⚠ Failed to load players.</td></tr>";
+      $("#players-table").innerHTML = "<tr><td colspan='5'>⚠ Failed to load players.</td></tr>";
     }
   } finally {
-    loader.style.display = "none";
-    resetRefreshTimer(); // restart countdown after load
+    $("#loader").style.display = "none";
+    icon?.classList.remove("spin");
+    resetRefreshTimer();
   }
 }
 
 function updateUI(players, data, isOld = false) {
-  // Set server name
-  const serverTitle = document.getElementById("server-title");
-  serverTitle.textContent = cleanServerName(data?.Data?.hostname || data?.hostname || "FiveM Server");
+  const d = data?.Data ?? data ?? {};
 
-  // Set player count
-  const serverCount = document.getElementById("server-count");
-  serverCount.textContent = `(${players.length}/${data?.Data?.sv_maxclients || data?.sv_maxclients || "?"})`;
+  $("#server-title").textContent = stripColorCodes(d?.hostname || "FiveM Server");
 
-  // Render tables
-  renderPlayers(players);
-  renderOffline(players);
+  const max = d?.sv_maxclients ?? d?.vars?.sv_maxclients ?? d?.vars?.svMaxClients ?? "?";
+  $("#server-count").textContent = `(${players.length}/${max})`;
+
+  renderPlayers();   // render from cached lastPlayers + current filters
+  renderOffline();   // compute offline vs shift lists
 }
 
-function renderPlayers(players) {
-  const container = document.getElementById("players-table");
-  container.innerHTML = "";
-
-  // Header row
-  const header = `
+// === RENDER: ONLINE ===
+function renderPlayers() {
+  const table = $("#players-table");
+  table.innerHTML = `
     <tr>
       <th>No.</th>
       <th>ID</th>
@@ -96,112 +99,108 @@ function renderPlayers(players) {
       <th>Role</th>
       <th>Ping</th>
     </tr>`;
-  container.innerHTML = header;
 
-  const search = document.getElementById("search").value.toLowerCase();
-  const filter = document.getElementById("shift-filter").value;
+  const searchVal = ($("#search").value || "").toLowerCase();
+  const filter = $("#shift-filter").value;
 
-  // Apply filters
-  let filteredPlayers = players
-    .filter(p => p.name.toLowerCase().includes(search))
-    .filter(p => {
-      if (filter === "all") return true;
-      return shiftGroups[filter]?.includes(p.name);
-    });
+  const filtered = lastPlayers.filter((p) => {
+    const clean = stripColorCodes(p?.name || "");
+    // keep search user-friendly (case-insensitive search text)
+    if (searchVal && !clean.toLowerCase().includes(searchVal)) return false;
 
-  // Serial number fix: use index of filtered array
-  filteredPlayers.forEach((p, i) => {
-    let shiftTag = "";
-    for (let [shift, names] of Object.entries(shiftGroups)) {
-      if (names.includes(p.name)) shiftTag = shift;
+    if (filter !== "all") {
+      // STRICT role filter: exact (case-sensitive) match in that shift set
+      return shiftSets[filter].has(clean);
     }
-    const row = `
+    return true;
+  });
+
+  filtered.forEach((p, i) => {
+    const clean = stripColorCodes(p?.name || "");
+
+    // STRICT role detection (exact match only)
+    let role = "-";
+    for (const [shift, set] of Object.entries(shiftSets)) {
+      if (set.has(clean)) { role = shift; break; }
+    }
+
+    table.insertAdjacentHTML("beforeend", `
       <tr>
         <td>${i + 1}</td>
-        <td>${p.id}</td>
-        <td>${p.name}</td>
-        <td>${shiftTag || "-"}</td>
-        <td>${p.ping} ms</td>
-      </tr>`;
-    container.innerHTML += row;
+        <td>${p?.id ?? "-"}</td>
+        <td>${escapeHtml(clean)}</td>
+        <td>${role}</td>
+        <td>${p?.ping ?? "-"} ms</td>
+      </tr>`);
   });
+
+  if (filtered.length === 0) {
+    table.insertAdjacentHTML("beforeend", `<tr><td colspan="5">No players match your filters.</td></tr>`);
+  }
 }
 
-function renderOffline(players) {
-  const container = document.getElementById("offline-table");
-  container.innerHTML = "";
-
-  const header = `
+// === RENDER: OFFLINE ===
+function renderOffline() {
+  const table = $("#offline-table");
+  table.innerHTML = `
     <tr>
       <th>Name</th>
       <th>Role</th>
       <th>Status</th>
     </tr>`;
-  container.innerHTML = header;
 
-  const onlineNames = players.map(p => p.name);
+  // Build a set of ONLINE names (color codes stripped) — case-sensitive
+  const online = new Set(lastPlayers.map((p) => stripColorCodes(p?.name || "")));
 
-  for (let [shift, names] of Object.entries(shiftGroups)) {
-    names.forEach(name => {
-      if (!onlineNames.includes(name)) {
-        const row = `
+  for (const [shift, names] of Object.entries(shiftGroups)) {
+    for (const name of names) {
+      if (!online.has(name)) {
+        table.insertAdjacentHTML("beforeend", `
           <tr class="offline">
-            <td>${name}</td>
+            <td>${escapeHtml(name)}</td>
             <td>${shift}</td>
             <td>🔴 Offline</td>
-          </tr>`;
-        container.innerHTML += row;
+          </tr>`);
       }
-    });
+    }
   }
 }
 
-// Tabs
-document.querySelectorAll(".tab").forEach(tab => {
+// === Tabs ===
+$$(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+    $$(".tab").forEach((t) => t.classList.remove("active"));
+    $$(".tab-content").forEach((c) => c.classList.remove("active"));
     tab.classList.add("active");
     document.getElementById(tab.dataset.tab).classList.add("active");
   });
 });
 
-// Search/filter events
-document.getElementById("search").addEventListener("input", () => loadPlayers());
-document.getElementById("shift-filter").addEventListener("change", () => loadPlayers());
+// === Filters: re-render only (no refetch) ===
+const debounce = (fn, ms = 150) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+$("#search").addEventListener("input", debounce(renderPlayers, 120));
+$("#shift-filter").addEventListener("change", renderPlayers);
 
-// Manual refresh (click refresh icon)
-document.getElementById("refresh-status").addEventListener("click", () => {
-  loadPlayers();
-});
+// === Manual refresh ===
+$("#refresh-status").addEventListener("click", () => loadPlayers());
 
-// Auto refresh countdown
+// === Auto refresh ===
 function startRefreshTimer() {
   refreshCounter = refreshInterval;
   updateRefreshDisplay();
-
+  clearInterval(refreshTimer);
   refreshTimer = setInterval(() => {
     refreshCounter--;
     updateRefreshDisplay();
-
-    if (refreshCounter <= 0) {
-      loadPlayers();
-    }
+    if (refreshCounter <= 0) loadPlayers();
   }, 1000);
 }
-
-function resetRefreshTimer() {
-  clearInterval(refreshTimer);
-  startRefreshTimer();
-}
-
+function resetRefreshTimer() { startRefreshTimer(); }
 function updateRefreshDisplay() {
-  const timerSpan = document.getElementById("refresh-timer");
-  if (timerSpan) {
-    timerSpan.textContent = refreshCounter + "s";
-  }
+  const el = $("#refresh-timer");
+  if (el) el.textContent = refreshCounter + "s";
 }
 
-// Initial load
+// === Boot ===
 loadPlayers();
 startRefreshTimer();
