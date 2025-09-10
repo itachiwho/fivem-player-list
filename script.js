@@ -34,7 +34,7 @@ let refreshInterval = 30; // seconds
 let refreshCounter = refreshInterval;
 let refreshTimer;
 
-// Expose for quick debugging if you want
+// expose for quick debugging
 window.lastPlayers = lastPlayers;
 
 // === FETCH HELPERS ===
@@ -48,7 +48,7 @@ async function fetchWithTimeout(url, { timeout = 7000, init = {} } = {}) {
   }
 }
 
-// LENIENT JSON for Vercel: send Accept header, and try to parse JSON even if content-type is wrong
+// Vercel: lenient JSON (Accept header; try JSON regardless of content-type)
 async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
   const res = await fetchWithTimeout(url, {
     timeout,
@@ -62,7 +62,7 @@ async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
   }
 }
 
-// STRICT JSON for CFX: require content-type to include "json"
+// CFX: strict JSON (require content-type includes "json")
 async function fetchJsonStrict(url, { timeout = 7000 } = {}) {
   const res = await fetchWithTimeout(url, { timeout });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -71,7 +71,61 @@ async function fetchJsonStrict(url, { timeout = 7000 } = {}) {
   return await res.json();
 }
 
-// Try Vercel → fallback to CFX, with small retries
+// Helpers to extract nested fields safely
+function pickPlayersFromAnyShape(j) {
+  // direct paths first
+  let arr =
+    j.players ||
+    j.data?.players ||
+    j.Data?.players ||
+    j.server?.players ||
+    j.response?.players ||
+    j.result?.players ||
+    j.payload?.players ||
+    j.body?.players ||
+    null;
+
+  if (Array.isArray(arr) && arr.length > 0) return arr;
+
+  // fallback: BFS search for a key named "players" that is a non-empty array
+  const queue = [j];
+  const seen = new Set();
+  while (queue.length) {
+    const node = queue.shift();
+    if (!node || typeof node !== "object" || seen.has(node)) continue;
+    seen.add(node);
+    for (const [k, v] of Object.entries(node)) {
+      if (/^players$/i.test(k) && Array.isArray(v) && v.length > 0) return v;
+      if (v && typeof v === "object") queue.push(v);
+    }
+  }
+  return null;
+}
+
+function pickHostnameFromAnyShape(j) {
+  return (
+    j.hostname ||
+    j.data?.hostname ||
+    j.Data?.hostname ||
+    j.server?.hostname ||
+    j.response?.hostname ||
+    "FiveM Server"
+  );
+}
+
+function pickMaxFromAnyShape(j) {
+  return (
+    j.maxPlayers ||
+    j.slots ||
+    j.data?.sv_maxclients ||
+    j.Data?.sv_maxclients ||
+    j.vars?.sv_maxclients ||
+    j.vars?.svMaxClients ||
+    "?"
+  );
+}
+
+// Try Vercel → if missing/empty players, fallback to CFX (with small retries)
 async function getServerSnapshot() {
   const attempt = async (fn) => {
     const delays = [0, 500, 1000]; // immediate, 0.5s, 1s
@@ -83,39 +137,21 @@ async function getServerSnapshot() {
     throw lastErr;
   };
 
-  // 1) Try Vercel wrapper first (lenient JSON)
+  // 1) Vercel first
   try {
     const j = await attempt(() => fetchJsonLenient(VERCEL_STATUS_URL, { timeout: 7000 }));
+    const players = pickPlayersFromAnyShape(j);
 
-    // Normalize players / hostname / max from common shapes
-    const players =
-      j.players ||
-      j.data?.players ||
-      j.Data?.players ||
-      j.server?.players ||
-      j.response?.players ||
-      [];
+    // If Vercel doesn't give a non-empty array, force fallback to CFX
+    if (!Array.isArray(players) || players.length === 0) {
+      throw new Error("vercel: players missing or empty");
+    }
 
-    const hostname =
-      j.hostname ||
-      j.data?.hostname ||
-      j.Data?.hostname ||
-      j.server?.hostname ||
-      "FiveM Server";
-
-    const max =
-      j.maxPlayers ||
-      j.slots ||
-      j.data?.sv_maxclients ||
-      j.Data?.sv_maxclients ||
-      j.vars?.sv_maxclients ||
-      j.vars?.svMaxClients ||
-      "?";
-
-    if (!Array.isArray(players)) throw new Error("vercel: players not array");
+    const hostname = pickHostnameFromAnyShape(j);
+    const max = pickMaxFromAnyShape(j);
     return { players, hostname, max, source: "vercel" };
   } catch (_) {
-    // 2) Fallback to CFX endpoint (strict JSON)
+    // 2) Fallback to CFX
     const j = await fetchJsonStrict(CFX_URL, { timeout: 7000 });
     const d = j?.Data ?? j ?? {};
     const players = (d.players ?? []).slice();
