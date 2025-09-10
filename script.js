@@ -7,22 +7,34 @@ const shiftGroups = {
   "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
   "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc"],
   "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
-  "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"]
+  "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"],
 };
 
 // === UTIL ===
 function stripColorCodes(name = "") {
+  // Remove FiveM color codes like ^1 ^2 ...
   return name.replace(/\^([0-9])/g, "").trim();
 }
 function escapeHtml(s = "") {
-  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
+const $  = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+// Exact-match Sets for roles (case-sensitive, after stripping color codes on the player name)
 const shiftSets = Object.fromEntries(
   Object.entries(shiftGroups).map(([shift, names]) => [shift, new Set(names)])
 );
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+// === STATE ===
+let lastPlayers = [];
+let lastMeta = { hostname: "FiveM Server", max: "?" };
+
+let refreshInterval = 30; // seconds
+let refreshCounter = refreshInterval;
+let refreshTimer;
+
+// === FETCH HELPERS ===
 async function fetchJsonWithTimeout(url, { timeout = 7000, signal } = {}) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(new Error("timeout")), timeout);
@@ -37,46 +49,37 @@ async function fetchJsonWithTimeout(url, { timeout = 7000, signal } = {}) {
   }
 }
 
-// Try vercel → fallback to CFX
+// Try vercel → fallback to CFX, with small retries
 async function getServerSnapshot() {
-  // small retry/backoff helper
   const attempt = async (fn) => {
-    const tries = [0, 500, 1000]; // immediate, 0.5s, 1s
+    const delays = [0, 500, 1000]; // immediate, 0.5s, 1s
     let lastErr;
-    for (const delay of tries) {
-      if (delay) await new Promise(r => setTimeout(r, delay));
+    for (const d of delays) {
+      if (d) await new Promise(r => setTimeout(r, d));
       try { return await fn(); } catch (e) { lastErr = e; }
     }
     throw lastErr;
   };
 
-  // 1) Try vercel wrapper (often handles CORS and is stable)
+  // 1) Try Vercel wrapper first
   try {
     const j = await attempt(() => fetchJsonWithTimeout(VERCEL_STATUS_URL, { timeout: 7000 }));
-    // normalize
     const players = j.players || j.data?.players || j.Data?.players || [];
     const hostname = j.hostname || j.data?.hostname || j.Data?.hostname || "FiveM Server";
     const max = j.maxPlayers || j.slots || j.data?.sv_maxclients || j.Data?.sv_maxclients ||
                 j.vars?.sv_maxclients || j.vars?.svMaxClients || "?";
     if (!Array.isArray(players)) throw new Error("vercel: players not array");
-    return { players, hostname, max, raw: j, source: "vercel" };
+    return { players, hostname, max, source: "vercel" };
   } catch (_) {
-    // 2) Fallback to CFX
+    // 2) Fallback to CFX endpoint
     const j = await fetchJsonWithTimeout(CFX_URL, { timeout: 7000 });
     const d = j?.Data ?? j ?? {};
     const players = (d.players ?? []).slice();
     const hostname = d.hostname || "FiveM Server";
     const max = d.sv_maxclients ?? d.vars?.sv_maxclients ?? d.vars?.svMaxClients ?? "?";
-    return { players, hostname, max, raw: j, source: "cfx" };
+    return { players, hostname, max, source: "cfx" };
   }
 }
-
-// === STATE ===
-let lastPlayers = [];
-let lastMeta = { hostname: "FiveM Server", max: "?" };
-let refreshInterval = 30; // seconds
-let refreshCounter = refreshInterval;
-let refreshTimer;
 
 // === UI HELPERS ===
 function setMeta(hostname, max) {
@@ -117,6 +120,7 @@ function renderPlayers() {
 
   filtered.forEach((p, i) => {
     const clean = stripColorCodes(p?.name || "");
+    // exact, case-sensitive role mapping
     let role = "-";
     for (const [shift, set] of Object.entries(shiftSets)) {
       if (set.has(clean)) { role = shift; break; }
@@ -146,7 +150,9 @@ function renderOffline() {
       <th>Status</th>
     </tr>`;
 
+  // Online names set (after stripping color codes), case-sensitive comparison
   const online = new Set(lastPlayers.map((p) => stripColorCodes(p?.name || "")));
+
   for (const [shift, names] of Object.entries(shiftGroups)) {
     for (const name of names) {
       if (!online.has(name)) {
@@ -170,21 +176,26 @@ async function loadPlayers() {
     loader.style.display = "flex";
     icon?.classList.add("spin");
 
-    const { players, hostname, max } = await getServerSnapshot();
+    const snap = await getServerSnapshot();
+    const players = snap.players.slice();
 
-    // sort stable
-    players.sort((a, b) => (a?.id ?? 0) - (b?.id ?? 0) || String(a?.name||"").localeCompare(String(b?.name||"")));
+    // Stable sort: by id, then name
+    players.sort((a, b) =>
+      (a?.id ?? 0) - (b?.id ?? 0) ||
+      String(a?.name || "").localeCompare(String(b?.name || ""))
+    );
 
-    // update cache & UI
+    // Update cache & UI only after success
     lastPlayers = players;
-    lastMeta = { hostname, max };
+    lastMeta = { hostname: snap.hostname, max: snap.max };
+
     hideWarning();
-    setMeta(hostname, max);
+    setMeta(lastMeta.hostname, lastMeta.max);
     renderPlayers();
     renderOffline();
   } catch (err) {
     console.error("Fetch failed:", err);
-    // keep showing last good list; just warn
+    // Keep last list; warn if we had something previously
     if (lastPlayers.length) {
       showWarning("⚠ Couldn’t update, showing last data");
       setMeta(lastMeta.hostname, lastMeta.max);
@@ -210,7 +221,7 @@ $$(".tab").forEach((tab) => {
   });
 });
 
-// === Filters: re-render only ===
+// === Filters: re-render only (no refetch) ===
 const debounce = (fn, ms = 150) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 $("#search").addEventListener("input", debounce(renderPlayers, 120));
 $("#shift-filter").addEventListener("change", renderPlayers);
@@ -218,11 +229,9 @@ $("#shift-filter").addEventListener("change", renderPlayers);
 // === Manual refresh ===
 $("#refresh-status").addEventListener("click", () => loadPlayers());
 
-// === Auto refresh (SWR style) ===
-let refreshCounter = 30;
-let refreshTimer;
+// === Auto refresh (keeps cadence, no overlap) ===
 function startRefreshTimer() {
-  refreshCounter = 30;
+  refreshCounter = refreshInterval;
   updateRefreshDisplay();
   clearInterval(refreshTimer);
   refreshTimer = setInterval(() => {
