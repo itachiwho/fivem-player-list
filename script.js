@@ -21,7 +21,7 @@ function escapeHtml(s = "") {
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-// Exact-match Sets for roles (case-sensitive, after stripping color codes on the player name)
+// Exact-match Sets for roles (case-sensitive, after stripping color codes on player names)
 const shiftSets = Object.fromEntries(
   Object.entries(shiftGroups).map(([shift, names]) => [shift, new Set(names)])
 );
@@ -34,22 +34,44 @@ let refreshInterval = 30; // seconds
 let refreshCounter = refreshInterval;
 let refreshTimer;
 
+// Expose for quick debugging if you want
+window.lastPlayers = lastPlayers;
+
 // === FETCH HELPERS ===
-async function fetchJsonWithTimeout(url, { timeout = 7000, signal } = {}) {
+async function fetchWithTimeout(url, { timeout = 7000, init = {} } = {}) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(new Error("timeout")), timeout);
   try {
-    const res = await fetch(url, { cache: "no-store", signal: signal || controller.signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const ct = res.headers.get("content-type") || "";
-    if (!ct.includes("json")) throw new Error("non-JSON response");
-    return await res.json();
+    return await fetch(url, { cache: "no-store", ...init, signal: init.signal || controller.signal });
   } finally {
     clearTimeout(id);
   }
 }
 
-// Try vercel → fallback to CFX, with small retries
+// LENIENT JSON for Vercel: send Accept header, and try to parse JSON even if content-type is wrong
+async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
+  const res = await fetchWithTimeout(url, {
+    timeout,
+    init: { headers: { Accept: "application/json" } },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  try {
+    return await res.json();
+  } catch {
+    throw new Error("non-JSON response");
+  }
+}
+
+// STRICT JSON for CFX: require content-type to include "json"
+async function fetchJsonStrict(url, { timeout = 7000 } = {}) {
+  const res = await fetchWithTimeout(url, { timeout });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("json")) throw new Error("non-JSON response");
+  return await res.json();
+}
+
+// Try Vercel → fallback to CFX, with small retries
 async function getServerSnapshot() {
   const attempt = async (fn) => {
     const delays = [0, 500, 1000]; // immediate, 0.5s, 1s
@@ -61,18 +83,40 @@ async function getServerSnapshot() {
     throw lastErr;
   };
 
-  // 1) Try Vercel wrapper first
+  // 1) Try Vercel wrapper first (lenient JSON)
   try {
-    const j = await attempt(() => fetchJsonWithTimeout(VERCEL_STATUS_URL, { timeout: 7000 }));
-    const players = j.players || j.data?.players || j.Data?.players || [];
-    const hostname = j.hostname || j.data?.hostname || j.Data?.hostname || "FiveM Server";
-    const max = j.maxPlayers || j.slots || j.data?.sv_maxclients || j.Data?.sv_maxclients ||
-                j.vars?.sv_maxclients || j.vars?.svMaxClients || "?";
+    const j = await attempt(() => fetchJsonLenient(VERCEL_STATUS_URL, { timeout: 7000 }));
+
+    // Normalize players / hostname / max from common shapes
+    const players =
+      j.players ||
+      j.data?.players ||
+      j.Data?.players ||
+      j.server?.players ||
+      j.response?.players ||
+      [];
+
+    const hostname =
+      j.hostname ||
+      j.data?.hostname ||
+      j.Data?.hostname ||
+      j.server?.hostname ||
+      "FiveM Server";
+
+    const max =
+      j.maxPlayers ||
+      j.slots ||
+      j.data?.sv_maxclients ||
+      j.Data?.sv_maxclients ||
+      j.vars?.sv_maxclients ||
+      j.vars?.svMaxClients ||
+      "?";
+
     if (!Array.isArray(players)) throw new Error("vercel: players not array");
     return { players, hostname, max, source: "vercel" };
   } catch (_) {
-    // 2) Fallback to CFX endpoint
-    const j = await fetchJsonWithTimeout(CFX_URL, { timeout: 7000 });
+    // 2) Fallback to CFX endpoint (strict JSON)
+    const j = await fetchJsonStrict(CFX_URL, { timeout: 7000 });
     const d = j?.Data ?? j ?? {};
     const players = (d.players ?? []).slice();
     const hostname = d.hostname || "FiveM Server";
@@ -108,7 +152,7 @@ function renderPlayers() {
       <th>Ping</th>
     </tr>`;
 
-  const searchVal = ($("#search").value || "").toLowerCase();
+  const searchVal = ($("#search").value || "").trim().toLowerCase();
   const filter = $("#shift-filter").value;
 
   const filtered = lastPlayers.filter((p) => {
@@ -187,6 +231,7 @@ async function loadPlayers() {
 
     // Update cache & UI only after success
     lastPlayers = players;
+    window.lastPlayers = lastPlayers; // keep debug in sync
     lastMeta = { hostname: snap.hostname, max: snap.max };
 
     hideWarning();
