@@ -2,10 +2,10 @@ const serverId = "8p75gb"; // change this if needed
 
 // Define shift groups
 const shiftGroups = {
-  "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami"],
-  "Shift-2": ["ITACHI", "💤"],
-  "Full Shift": ["DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
-  "Staff": ["AdminGuy", "Moderator", "Helper"] // Example staff list
+  "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
+  "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc"],
+  "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
+  "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"] // Example staff list
 };
 
 // Store last good data
