@@ -35,6 +35,9 @@ async function loadPlayers() {
     const data = await res.json();
     const players = data.Data?.players || data.players || [];
 
+    // Always sort players by ID to prevent missing/skipping
+    players.sort((a, b) => a.id - b.id);
+
     // Save last good data
     lastPlayers = players;
     lastServerData = data;
@@ -98,28 +101,30 @@ function renderPlayers(players) {
   const search = document.getElementById("search").value.toLowerCase();
   const filter = document.getElementById("shift-filter").value;
 
-  players
+  // Apply filters
+  let filteredPlayers = players
     .filter(p => p.name.toLowerCase().includes(search))
     .filter(p => {
       if (filter === "all") return true;
       return shiftGroups[filter]?.includes(p.name);
-    })
-    .sort((a, b) => a.id - b.id) // sort by ID ascending
-    .forEach((p, i) => {
-      let shiftTag = "";
-      for (let [shift, names] of Object.entries(shiftGroups)) {
-        if (names.includes(p.name)) shiftTag = shift;
-      }
-      const row = `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${p.id}</td>
-          <td>${p.name}</td>
-          <td>${shiftTag || "-"}</td>
-          <td>${p.ping} ms</td>
-        </tr>`;
-      container.innerHTML += row;
     });
+
+  // Serial number fix: use index of filtered array
+  filteredPlayers.forEach((p, i) => {
+    let shiftTag = "";
+    for (let [shift, names] of Object.entries(shiftGroups)) {
+      if (names.includes(p.name)) shiftTag = shift;
+    }
+    const row = `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${p.id}</td>
+        <td>${p.name}</td>
+        <td>${shiftTag || "-"}</td>
+        <td>${p.ping} ms</td>
+      </tr>`;
+    container.innerHTML += row;
+  });
 }
 
 function renderOffline(players) {
