@@ -10,7 +10,7 @@
   <div id="wrapper">
     <header>
       <div id="title">
-        <img src="LRBD.png" alt="Server Logo" id="server-LRBD">
+        <img src="LRBD.png" alt="Server Logo" id="server-logo">
         <span id="server-title">FiveM Player List</span>
       </div>
       <div id="server-count">(0/0)</div>
@@ -27,16 +27,14 @@
           <option value="Staff">Staff</option>
         </select>
       </div>
-      <div class="utility-icons">
-        <div class="icon" id="refresh-status">
-          <img src="refresh.svg" alt="Refresh Icon" style="width:20px;height:20px;vertical-align:middle;">
-          <span id="refresh-timer">30s</span>
-        </div>
+      <div id="refresh-status">
+        <img src="refresh.svg" alt="Refresh Icon">
+        <span id="refresh-timer">30s</span>
       </div>
     </section>
 
     <!-- Warning message -->
-    <div id="warning" style="display:none; color: #f1c40f; text-align: center; padding: 8px; font-weight: bold;"></div>
+    <div id="warning" style="display:none; text-align:center; padding:8px; font-weight:bold; color:#f1c40f;"></div>
 
     <div class="tabs">
       <div class="tab active" data-tab="online">Online Players</div>
@@ -51,7 +49,8 @@
     </div>
 
     <footer class="table-footer">
-      <p>This page is not affiliated with FiveM or any other server. Created by 
+      <p>
+        This page is not affiliated with FiveM or any other server. Created by 
         <a href="https://discord.com/users/665163856145809464" target="_blank">Itachi</a>.
       </p>
     </footer>
