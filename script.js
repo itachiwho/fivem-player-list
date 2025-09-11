@@ -6,7 +6,7 @@ const CFX_URL = `https://servers-frontend.fivem.net/api/servers/single/${serverI
 const shiftGroups = {
   "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
   "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc"],
-  "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
+  "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "rifat", "IT", "daddy_ji", "Poor Guy", "IF TI", "PiXvi RE", "anirb"],
   "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"],
 };
 
