@@ -8,6 +8,24 @@ let refreshInterval = 30; // seconds
 let refreshCounter = refreshInterval;
 let refreshTimer;
 
+// === UTIL FUNCTIONS ===
+function $$ (sel) {
+  return Array.from(document.querySelectorAll(sel));
+}
+
+function $(sel) {
+  return document.querySelector(sel);
+}
+
+function stripColorCodes(name = "") {
+  // Remove FiveM color codes like ^1 ^2 ...
+  return name.replace(/\^([0-9])/g, "").trim();
+}
+
+function escapeHtml(s = "") {
+  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
 // === FETCH HELPERS ===
 async function fetchWithTimeout(url, { timeout = 7000, init = {} } = {}) {
   const controller = new AbortController();
