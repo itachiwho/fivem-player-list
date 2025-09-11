@@ -1,5 +1,5 @@
 // === CONFIG ===
-const VERCEL_STATUS_URL = "https://fivem-server.vercel.app/status/legacybd";
+const PLAYERS_API_URL = "http://139.162.4.173:30120/players.json";
 
 // === STATE ===
 let lastPlayers = [];
@@ -19,7 +19,7 @@ async function fetchWithTimeout(url, { timeout = 7000, init = {} } = {}) {
   }
 }
 
-// Vercel: lenient JSON (Accept header; try JSON regardless of content-type)
+// Custom fetch to get player data from the new API
 async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
   const res = await fetchWithTimeout(url, {
     timeout,
@@ -33,23 +33,20 @@ async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
   }
 }
 
-// Try Vercel first; if no players or error, fallback to empty data
+// Try the custom API to fetch player data
 async function getServerSnapshot() {
   try {
-    const j = await fetchJsonLenient(VERCEL_STATUS_URL, { timeout: 7000 });
+    const j = await fetchJsonLenient(PLAYERS_API_URL, { timeout: 7000 });
 
-    // Log the response for debugging
-    console.log("Vercel Response:", j);
+    // Now we directly use the player data
+    const players = j; // Players are the direct array returned from the API
 
-    // Now we correctly handle the array directly returned by Vercel
-    const players = Array.isArray(j) ? j : [];
-
-    const hostname = "FiveM Server";  // Static value for now (or get from another source if available)
+    const hostname = "FiveM Server";  // Static value or pull from another source if available
     const max = players.length || "?"; // Just use player count for max players
 
-    return { players, hostname, max, source: "vercel" };
+    return { players, hostname, max, source: "custom" };
   } catch (err) {
-    console.error("Error with Vercel fetch:", err);
+    console.error("Error with custom fetch:", err);
     return { players: [], hostname: "FiveM Server", max: "?" }; // Empty players on failure
   }
 }
