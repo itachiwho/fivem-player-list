@@ -1,12 +1,10 @@
 // === CONFIG ===
-const serverId = "8p75gb"; // your CFX code
 const VERCEL_STATUS_URL = "https://fivem-server.vercel.app/status/legacybd";
-const CFX_URL = `https://servers-frontend.fivem.net/api/servers/single/${serverId}`;
 
 const shiftGroups = {
   "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
   "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc"],
-  "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "rifat", "IT", "daddy_ji", "Poor Guy", "IF TI", "PiXvi RE", "anirb"],
+  "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
   "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"],
 };
 
@@ -15,27 +13,20 @@ function stripColorCodes(name = "") {
   // Remove FiveM color codes like ^1 ^2 ...
   return name.replace(/\^([0-9])/g, "").trim();
 }
+
 function escapeHtml(s = "") {
-  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
+
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
-// Exact-match Sets for roles (case-sensitive, after stripping color codes on player names)
-const shiftSets = Object.fromEntries(
-  Object.entries(shiftGroups).map(([shift, names]) => [shift, new Set(names)])
-);
 
 // === STATE ===
 let lastPlayers = [];
 let lastMeta = { hostname: "FiveM Server", max: "?" };
-
 let refreshInterval = 30; // seconds
 let refreshCounter = refreshInterval;
 let refreshTimer;
-
-// expose for quick debugging
-window.lastPlayers = lastPlayers;
 
 // === FETCH HELPERS ===
 async function fetchWithTimeout(url, { timeout = 7000, init = {} } = {}) {
@@ -62,102 +53,43 @@ async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
   }
 }
 
-// CFX: strict JSON (require content-type includes "json")
-async function fetchJsonStrict(url, { timeout = 7000 } = {}) {
-  const res = await fetchWithTimeout(url, { timeout });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = res.headers.get("content-type") || "";
-  if (!ct.includes("json")) throw new Error("non-JSON response");
-  return await res.json();
-}
-
-// Helpers to extract nested fields safely
-function pickPlayersFromAnyShape(j) {
-  // direct paths first
-  let arr =
-    j.players ||
-    j.data?.players ||
-    j.Data?.players ||
-    j.server?.players ||
-    j.response?.players ||
-    j.result?.players ||
-    j.payload?.players ||
-    j.body?.players ||
-    null;
-
-  if (Array.isArray(arr) && arr.length > 0) return arr;
-
-  // fallback: BFS search for a key named "players" that is a non-empty array
-  const queue = [j];
-  const seen = new Set();
-  while (queue.length) {
-    const node = queue.shift();
-    if (!node || typeof node !== "object" || seen.has(node)) continue;
-    seen.add(node);
-    for (const [k, v] of Object.entries(node)) {
-      if (/^players$/i.test(k) && Array.isArray(v) && v.length > 0) return v;
-      if (v && typeof v === "object") queue.push(v);
-    }
-  }
-  return null;
-}
-
-function pickHostnameFromAnyShape(j) {
-  return (
-    j.hostname ||
-    j.data?.hostname ||
-    j.Data?.hostname ||
-    j.server?.hostname ||
-    j.response?.hostname ||
-    "FiveM Server"
-  );
-}
-
-function pickMaxFromAnyShape(j) {
-  return (
-    j.maxPlayers ||
-    j.slots ||
-    j.data?.sv_maxclients ||
-    j.Data?.sv_maxclients ||
-    j.vars?.sv_maxclients ||
-    j.vars?.svMaxClients ||
-    "?"
-  );
-}
-
-// Try Vercel → if missing/empty players, fallback to CFX (with small retries)
+// Try Vercel first; if no players or error, fallback to empty data
 async function getServerSnapshot() {
-  const attempt = async (fn) => {
-    const delays = [0, 500, 1000]; // immediate, 0.5s, 1s
-    let lastErr;
-    for (const d of delays) {
-      if (d) await new Promise(r => setTimeout(r, d));
-      try { return await fn(); } catch (e) { lastErr = e; }
-    }
-    throw lastErr;
-  };
-
-  // 1) Vercel first
   try {
-    const j = await attempt(() => fetchJsonLenient(VERCEL_STATUS_URL, { timeout: 7000 }));
-    const players = pickPlayersFromAnyShape(j);
+    const j = await fetchJsonLenient(VERCEL_STATUS_URL, { timeout: 7000 });
 
-    // If Vercel doesn't give a non-empty array, force fallback to CFX
+    const players =
+      j.players ||
+      j.data?.players ||
+      j.Data?.players ||
+      j.server?.players ||
+      j.response?.players ||
+      [];
+
+    const hostname =
+      j.hostname ||
+      j.data?.hostname ||
+      j.Data?.hostname ||
+      j.server?.hostname ||
+      "FiveM Server";
+
+    const max =
+      j.maxPlayers ||
+      j.slots ||
+      j.data?.sv_maxclients ||
+      j.Data?.sv_maxclients ||
+      j.vars?.sv_maxclients ||
+      j.vars?.svMaxClients ||
+      "?";
+
     if (!Array.isArray(players) || players.length === 0) {
       throw new Error("vercel: players missing or empty");
     }
 
-    const hostname = pickHostnameFromAnyShape(j);
-    const max = pickMaxFromAnyShape(j);
     return { players, hostname, max, source: "vercel" };
-  } catch (_) {
-    // 2) Fallback to CFX
-    const j = await fetchJsonStrict(CFX_URL, { timeout: 7000 });
-    const d = j?.Data ?? j ?? {};
-    const players = (d.players ?? []).slice();
-    const hostname = d.hostname || "FiveM Server";
-    const max = d.sv_maxclients ?? d.vars?.sv_maxclients ?? d.vars?.svMaxClients ?? "?";
-    return { players, hostname, max, source: "cfx" };
+  } catch (err) {
+    console.error("Error with Vercel fetch:", err);
+    return { players: [], hostname: "FiveM Server", max: "?" }; // Empty players on failure
   }
 }
 
@@ -166,11 +98,13 @@ function setMeta(hostname, max) {
   $("#server-title").textContent = stripColorCodes(hostname);
   $("#server-count").textContent = `(${lastPlayers.length}/${max})`;
 }
+
 function showWarning(msg) {
   const w = $("#warning");
   w.style.display = "block";
   w.textContent = msg;
 }
+
 function hideWarning() {
   const w = $("#warning");
   w.style.display = "none";
