@@ -1,26 +1,6 @@
 // === CONFIG ===
 const VERCEL_STATUS_URL = "https://fivem-server.vercel.app/status/legacybd";
 
-const shiftGroups = {
-  "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
-  "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc"],
-  "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "Windows-10", "IT", "daddy_ji", "Poor Guy"],
-  "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"],
-};
-
-// === UTIL ===
-function stripColorCodes(name = "") {
-  // Remove FiveM color codes like ^1 ^2 ...
-  return name.replace(/\^([0-9])/g, "").trim();
-}
-
-function escapeHtml(s = "") {
-  return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-}
-
-const $  = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
 // === STATE ===
 let lastPlayers = [];
 let lastMeta = { hostname: "FiveM Server", max: "?" };
@@ -58,33 +38,14 @@ async function getServerSnapshot() {
   try {
     const j = await fetchJsonLenient(VERCEL_STATUS_URL, { timeout: 7000 });
 
-    const players =
-      j.players ||
-      j.data?.players ||
-      j.Data?.players ||
-      j.server?.players ||
-      j.response?.players ||
-      [];
+    // Log the response for debugging
+    console.log("Vercel Response:", j);
 
-    const hostname =
-      j.hostname ||
-      j.data?.hostname ||
-      j.Data?.hostname ||
-      j.server?.hostname ||
-      "FiveM Server";
+    // Now we correctly handle the array directly returned by Vercel
+    const players = Array.isArray(j) ? j : [];
 
-    const max =
-      j.maxPlayers ||
-      j.slots ||
-      j.data?.sv_maxclients ||
-      j.Data?.sv_maxclients ||
-      j.vars?.sv_maxclients ||
-      j.vars?.svMaxClients ||
-      "?";
-
-    if (!Array.isArray(players) || players.length === 0) {
-      throw new Error("vercel: players missing or empty");
-    }
+    const hostname = "FiveM Server";  // Static value for now (or get from another source if available)
+    const max = players.length || "?"; // Just use player count for max players
 
     return { players, hostname, max, source: "vercel" };
   } catch (err) {
@@ -121,6 +82,11 @@ function renderPlayers() {
       <th>Role</th>
       <th>Ping</th>
     </tr>`;
+
+  if (lastPlayers.length === 0) {
+    table.innerHTML += "<tr><td colspan='5'>No players are currently online.</td></tr>";
+    return; // Skip further rendering if no players
+  }
 
   const searchVal = ($("#search").value || "").trim().toLowerCase();
   const filter = $("#shift-filter").value;
