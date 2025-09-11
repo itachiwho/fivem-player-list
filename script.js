@@ -1,5 +1,5 @@
 // === CONFIG ===
-const PLAYERS_API_URL = "http://139.162.4.173:30120/players.json";
+const PLAYERS_API_URL = "https://fivem-server.vercel.app/status/legacybd";
 
 // === STATE ===
 let lastPlayers = [];
@@ -37,7 +37,7 @@ async function fetchWithTimeout(url, { timeout = 7000, init = {} } = {}) {
   }
 }
 
-// Custom fetch to get player data from the new API
+// Custom fetch to get player data from the new Vercel API
 async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
   const res = await fetchWithTimeout(url, {
     timeout,
@@ -51,21 +51,30 @@ async function fetchJsonLenient(url, { timeout = 7000 } = {}) {
   }
 }
 
-// Try the custom API to fetch player data
+// Fetch player data from the Vercel API
 async function getServerSnapshot() {
   try {
+    console.log(`Fetching players from ${PLAYERS_API_URL}...`);
     const j = await fetchJsonLenient(PLAYERS_API_URL, { timeout: 7000 });
 
-    // Now we directly use the player data
-    const players = j; // Players are the direct array returned from the API
+    // Log the full response for debugging
+    console.log("Vercel Response:", j);
 
-    const hostname = "FiveM Server";  // Static value or pull from another source if available
-    const max = players.length || "?"; // Just use player count for max players
+    // Ensure we correctly access the 'players' array in the response
+    const players = j.players || [];  // Vercel returns a 'players' array
 
-    return { players, hostname, max, source: "custom" };
+    // Handle cases where there are no players
+    if (players.length === 0) {
+      console.log("No players online.");
+    }
+
+    const hostname = j.hostname || "FiveM Server";  // Using hostname from the API response
+    const max = players.length || "?"; // Player count for max players
+
+    return { players, hostname, max, source: "vercel" };
   } catch (err) {
-    console.error("Error with custom fetch:", err);
-    return { players: [], hostname: "FiveM Server", max: "?" }; // Empty players on failure
+    console.error("Error with Vercel fetch:", err);
+    return { players: [], hostname: "FiveM Server", max: "?" }; // Return empty players on failure
   }
 }
 
