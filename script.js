@@ -4,8 +4,8 @@ const VERCEL_STATUS_URL = "https://fivem-server.vercel.app/status/legacybd";
 const CFX_URL = `https://servers-frontend.fivem.net/api/servers/single/${serverId}`;
 
 const shiftGroups = {
-  "Shift-1": ["SPL4SH", "6t9", "ALFYKUNNO", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
-  "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc"],
+  "Shift-1": ["SPL4SH", "Romeo", "tuntu", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain"],
+  "Shift-2": ["KiUHA", "KIBRIA", "iramf", "Mr Fraud", "ITACHI", "💤", "mihad", "pc", "TANJIM"],
   "Full Shift": ["Abir", "piupiu", "Achilles", "Mantasha", "DK Who", "DFIT", "rifat", "IT", "daddy_ji", "Poor Guy", "IF TI", "PiXvi RE", "anirb"],
   "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"],
 };
