@@ -7,7 +7,7 @@ const shiftGroups = {
   "Shift-1": ["SPL4SH", "Romeo", "tuntu", "Siam", "Hercules", "Sami", "hasib", "Mowaj Hossain", "BABY_69", "Achilles", "ahmed", "DFIT"],
   "Shift-2": ["KiUHA", "KIBRIA", "iramf", "ITACHI", "Mr Fraud", "💤", "mihad", "TANJIM", "KAL ANA KAL", "pc"],
   "Full Shift": ["Abir", "piupiu", "Mantasha", "Poor Guy", "IT", "daddy_ji", "rifat", "DK Who", "IF TI", "PiXvi RE", "anirb"],
-  "Staff": ["[Albatross]", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"],
+  "Staff": ["[Albatross]", "_ROVER_", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"],
 };
 
 // === UTIL ===
