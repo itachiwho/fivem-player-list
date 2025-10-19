@@ -2,21 +2,21 @@
 
 :root {
     --bg-color: #232323;
-    --wrapper-bg: rgba(44, 44, 44, 0.85); /* semi-transparent for blur */
-    --header-bg: rgba(23, 23, 23, 0.85);
-    --input-bg: rgba(35, 35, 35, 0.85);
-    --icon-bg: rgba(30, 30, 30, 0.85);
-    --icon-hover: rgba(37, 37, 37, 0.85);
-    --icon-active: rgba(46, 46, 46, 0.85);
-    --table-odd: rgba(38, 38, 38, 0.85);
+    --wrapper-bg: #2C2C2C;
+    --header-bg: #171717;
+    --input-bg: #232323;
+    --icon-bg: #1E1E1E;
+    --icon-hover: #252525;
+    --icon-active: #2e2e2e;
+    --table-odd: #262626;
     --text-color: white;
-    --text-secondary: #b0b0b0;
+    --text-secondary: #b0b0b0; /* slightly brighter for readability */
     --border-color: #3a3a3a;
 }
 
 html, body {
     height: 100%;
-    scroll-behavior: smooth;
+    scroll-behavior: smooth; /* smooth scrolling */
 }
 
 body {
@@ -30,32 +30,25 @@ body {
     font-family: 'Mulish', sans-serif;
 }
 
-/* === Wrapper === */
+/* --- FIXED WRAPPER --- */
 #wrapper {
     width: 75%;
-    min-height: 100%;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--wrapper-bg);
-    margin: 0 auto;
-    backdrop-filter: blur(10px); /* Frosted-glass effect */
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 12px;
+    border-radius: 12px;                 /* adds nice smooth corners */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.4); /* soft shadow for depth */
+    overflow: hidden;                    /* ensures header/tabs align seamlessly */
 }
 
-/* To disable blur, comment out these two lines above and replace with:
-   background: #2C2C2C;
-*/
-
-/* === Header === */
+/* --- Header --- */
 header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     background: var(--header-bg);
     padding: 0 24px;
-    border: none;
-    margin: 0;
 }
 
 #title {
@@ -85,7 +78,7 @@ header {
     color: #3498db;
 }
 
-/* === Search & Controls === */
+/* --- Search & controls --- */
 input, select {
     background: var(--input-bg);
     border: 0;
@@ -99,10 +92,8 @@ section {
     background: var(--header-bg);
     display: flex;
     justify-content: space-between;
-    padding: 12px 24px;
+    padding: 16px 24px;
     gap: 16px;
-    border: none;
-    margin: 0;
 }
 
 .controls-wrapper {
@@ -111,7 +102,7 @@ section {
     flex-grow: 1;
 }
 
-/* === Refresh Status === */
+/* --- Refresh status --- */
 #refresh-status {
     display: flex;
     align-items: center;
@@ -147,14 +138,11 @@ section {
     font-size: 14px;
 }
 
-/* === Tabs === */
+/* --- Tabs --- */
 .tabs {
     display: flex;
+    border-bottom: 1px solid var(--border-color);
     flex-wrap: wrap;
-    background: var(--header-bg);
-    border: none;
-    margin: 0;
-    padding: 0 24px;
 }
 
 .tab {
@@ -182,7 +170,7 @@ section {
     display: block;
 }
 
-/* === Table Styles === */
+/* --- Table Styles --- */
 .players-table {
     width: 100%;
     border-collapse: collapse;
@@ -220,7 +208,7 @@ section {
     color: #e74c3c;
 }
 
-/* === Footer === */
+/* --- Footer --- */
 footer {
     text-align: center;
     padding: 16px;
@@ -240,7 +228,7 @@ footer a:hover {
     text-decoration: underline;
 }
 
-/* === Loader === */
+/* --- Loader --- */
 .loader {
     display: none;
     position: fixed;
@@ -268,7 +256,7 @@ footer a:hover {
     100% { transform: rotate(360deg); }
 }
 
-/* === Responsive Layout === */
+/* --- Responsive Layout --- */
 @media (max-width: 1024px) {
     #wrapper {
         width: 90%;
