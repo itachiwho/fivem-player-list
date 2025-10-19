@@ -55,7 +55,7 @@ header {
     padding: 0 24px;
     backdrop-filter: blur(var(--blur-strength)); /* ✅ Frosted effect */
     -webkit-backdrop-filter: blur(var(--blur-strength));
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 0px solid var(--border-color);
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
@@ -99,7 +99,7 @@ section {
     gap: 16px;
     backdrop-filter: blur(var(--blur-strength));
     -webkit-backdrop-filter: blur(var(--blur-strength));
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 0px solid var(--border-color);
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
@@ -199,7 +199,7 @@ input, select {
 .players-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    margin-top: 1px;
     text-align: center;
     flex-grow: 1;
 }
