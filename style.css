@@ -53,8 +53,8 @@ header {
     justify-content: space-between;
     background: var(--header-bg);
     padding: 0 24px;
-    backdrop-filter: blur(var(--blur-strength)); /* ✅ Frosted effect */
-    -webkit-backdrop-filter: blur(var(--blur-strength));
+    /* backdrop-filter: blur(var(--blur-strength)); /* ✅ Frosted effect */
+    /* -webkit-backdrop-filter: blur(var(--blur-strength)); */
     border-bottom: 1px solid var(--border-color);
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
