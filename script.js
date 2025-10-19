@@ -190,7 +190,15 @@ function renderPlayers() {
 
   const filtered = lastPlayers.filter((p) => {
     const clean = stripColorCodes(p?.name || "");
-    if (searchVal && !clean.toLowerCase().includes(searchVal)) return false;
+    const idStr = String(p?.id ?? "").toLowerCase();
+
+    // ✅ Search by both player name AND server ID
+    const matchesSearch =
+      !searchVal ||
+      clean.toLowerCase().includes(searchVal) ||
+      idStr.includes(searchVal);
+
+    if (!matchesSearch) return false;
     if (filter !== "all") return shiftSets[filter]?.has(clean);
     return true;
   });
