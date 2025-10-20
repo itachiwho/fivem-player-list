@@ -40,6 +40,7 @@
     <div class="tabs">
       <div class="tab active" data-tab="online">Online Players</div>
       <div class="tab" data-tab="offline">Offline Players</div>
+      <div class="tab" data-tab="notes">Notices & Features</div>
     </div>
 
     <div class="tab-content active" id="online">
@@ -48,6 +49,46 @@
     <div class="tab-content" id="offline">
       <table id="offline-table" class="players-table"></table>
     </div>
+    <div class="tab-content" id="notes">
+  <div class="notice-list">
+    <div class="notice">
+      <h3>Duplicate Names</h3>
+      <p>
+        - Players with the same FiveM name (e.g., ID 223 “USER” and ID 376 “USER”) and also in the sheet list will both appear in Shift Group as duplicate if the name matches.
+      </p>
+    </div>
+
+      <div class="notice">
+  <h3>Shift Groups Source</h3>
+  <p>
+    - Shift groups load from 
+    <a href="https://docs.google.com/spreadsheets/d/1yaGuWdlojvBNRnIRRkz452dEs0pdgMY0v1qZ9vAsYDA/edit?usp=sharing"
+       target="_blank" class="sheet-link">
+       Google Sheets
+    </a>.
+    If that sheet is slow or changes format, roles may briefly show as “-” until it loads.
+  </p>
+    </div>
+    
+    <div class="notice">
+      <h3>Refresh & Updates</h3>
+      <p>
+        - The list auto-refreshes every 30s. You can also click the refresh icon.
+        “Last updated” time shows the most recent successful fetch.
+      </p>
+    </div>
+
+    <div class="notice">
+      <h3>Search & Filters</h3>
+      <p>
+        - Search matches by player <strong>Name</strong> and <strong>ID</strong>.
+        The Shift filter matches exact names in the sheet (case sensitivity depends on sheet entries).
+      </p>
+    </div>
+
+    <!-- Add more notices as needed -->
+  </div>
+</div>
 
     <footer class="table-footer">
       <p>
