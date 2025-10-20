@@ -319,3 +319,46 @@ footer a:hover {
         text-align: center;
     }
 }
+
+/* === Notes tab styles (scoped & strong) === */
+#notes .notice-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+#notes .notice {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  padding: 14px 16px !important;
+}
+
+#notes .notice h3 {
+  margin: 0 0 6px !important;
+  font-size: 16px !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+#notes .notice p {
+  margin: 0 !important;
+  color: var(--text-secondary) !important;
+  line-height: 1.5 !important;
+}
+
+/* Force blue, underlined link for the Google Sheet in Notes tab */
+#notes .sheet-link:link,
+#notes .sheet-link:visited {
+  color: #3498db !important;
+  text-decoration: underline !important;
+  font-weight: 600 !important;
+}
+#notes .sheet-link:hover,
+#notes .sheet-link:focus {
+  color: #5dade2 !important;
+  text-decoration: underline !important;
+}
+
+/* Optional: allow tabs to wrap if you add more later */
+.tabs { flex-wrap: wrap; }
