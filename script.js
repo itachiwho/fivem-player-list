@@ -5,7 +5,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkQmk1EPkEaJKZ
 
 // Manual Staff group (edit this in code)
 const manualStaffGroup = {
-  "Staff": ["[Albatross]", "_ROVER_", "KLOK", "Eyes_On_U", "Frog", "Zero", "GhostFreak"]
+  "Staff": ["[Albatross]", "_ROVER_", "Eyes_On_U", "Frog", "Zero", "GhostFreak"]
 };
 
 // === UTIL ===
@@ -161,8 +161,12 @@ function setSpinner(on) {
 }
 function updateRefreshDisplay() {
   const el = $("#refresh-timer");
-  const suffix = lastUpdated ? ` • ${lastUpdated}` : "";
-  if (el) el.textContent = `${refreshCounter}s${suffix}`;
+  if (!el) return;
+
+  const next = `${refreshCounter}s`;
+  const updated = lastUpdated ? ` • Last updated: ${lastUpdated}` : "";
+
+  el.textContent = `${next}${updated}`;
 }
 
 // === RENDER: ONLINE ===
@@ -332,4 +336,30 @@ function resetRefreshTimer() {
   renderPlayers();                     // re-render with roles
   renderOffline();
   startRefreshTimer();
+
+// === Live Date & Time (DD/MM/YYYY, 12-hour format, no seconds) ===
+function updateDateTime() {
+  const el = document.getElementById("current-datetime");
+  if (!el) return;
+
+  const now = new Date();
+
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = now.getFullYear();
+
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+
+  const formattedTime = `${hours}:${minutes} ${ampm}`;
+  const formattedDate = `${day}/${month}/${year}`;
+
+  el.textContent = `${formattedDate}, ${formattedTime}`;
+}
+
+// Update every minute
+setInterval(updateDateTime, 60000);
+updateDateTime();
 })();
