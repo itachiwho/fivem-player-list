@@ -1,6 +1,5 @@
 // === CONFIG ===
-const serverId = "8p75gb"; // your CFX code
-const CFX_URL = `https://servers-frontend.fivem.net/api/servers/single/${serverId}`;
+const PLAYERS_API = "https://fivem-proxy-five.vercel.app/api/players";
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkQmk1EPkEaJKZ8YlrCd89-66e55TgACGPIe11KgLYs3WIv80JY62_d6BJhQ-xNoIpiQTyrY8Pxn27/pub?gid=0&single=true&output=csv";
 
 // Manual Staff group (edit this in code)
@@ -116,25 +115,19 @@ async function fetchShiftGroups() {
   }
 }
 
-// === SERVER SNAPSHOT (CFX-only, fast timeout + quick retry) ===
+// === SERVER SNAPSHOT ===
 async function getServerSnapshot() {
-  // 1st attempt (short timeout)
-  try {
-    const j = await fetchJsonStrict(CFX_URL, { timeout: 3000 });
-    return normalizeCfxSnapshot(j);
-  } catch (e1) {
-    // Quick retry with small backoff
-    await new Promise(r => setTimeout(r, 500));
-    const j2 = await fetchJsonStrict(CFX_URL, { timeout: 4000 });
-    return normalizeCfxSnapshot(j2);
-  }
-}
-function normalizeCfxSnapshot(j) {
-  const d = j?.Data ?? j ?? {};
-  const players = (d.players ?? []).slice();
-  const hostname = d.hostname || "FiveM Server";
-  const max = d.sv_maxclients ?? d.vars?.sv_maxclients ?? d.vars?.svMaxClients ?? "?";
-  return { players, hostname, max };
+  const res = await fetchWithTimeout(PLAYERS_API, { timeout: 4000 });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const players = await res.json();
+
+  return {
+    players,
+    hostname: "FiveM Server",
+    max: "∞"
+  };
 }
 
 // === UI HELPERS ===
