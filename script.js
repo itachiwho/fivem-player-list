@@ -121,12 +121,12 @@ async function getServerSnapshot() {
 
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-  const players = await res.json();
+  const data = await res.json();
 
   return {
-    players,
-    hostname: "FiveM Server",
-    max: "∞"
+    players: data.players || [],
+    hostname: data.hostname || "FiveM Server",
+    max: data.max || "∞"
   };
 }
 
