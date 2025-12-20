@@ -4,7 +4,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkQmk1EPkEaJKZ
 
 // Manual Staff group (edit this in code)
 const manualStaffGroup = {
-  "Staff": ["[Shadow]", "_ROVER_", "Kingh8_Fury", "Frog", "Zero", "GhostFreak", "A1"]
+  "Staff": ["泣くオオカミ", "_ROVER_", "Kingh8_Fury", "Frog", "Zero", "GhostFreak", "A1"]
 };
 
 // === UTIL ===
@@ -198,10 +198,15 @@ function renderPlayers() {
 
   filtered.forEach((p, i) => {
     const clean = stripColorCodes(p?.name || "");
-    let role = "-";
-    for (const [shift, set] of Object.entries(shiftSets)) {
-      if (set.has(clean)) { role = shift; break; }
-    }
+const roles = [];
+
+for (const [shift, set] of Object.entries(shiftSets)) {
+  if (set.has(clean)) {
+    roles.push(shift);
+  }
+}
+    
+const role = roles.length ? roles.join(" • ") : "-";
     table.insertAdjacentHTML("beforeend", `
       <tr>
         <td>${i + 1}</td>
@@ -229,18 +234,28 @@ function renderOffline() {
 
   const online = new Set(lastPlayers.map((p) => stripColorCodes(p?.name || "")));
 
-  for (const [shift, names] of Object.entries(shiftGroups)) {
-    for (const name of names) {
-      if (!online.has(name)) {
-        table.insertAdjacentHTML("beforeend", `
-          <tr class="offline">
-            <td>${escapeHtml(name)}</td>
-            <td>${shift}</td>
-            <td>🔴 Offline</td>
-          </tr>`);
+for (const name of new Set(Object.values(shiftGroups).flat())) {
+  if (!online.has(name)) {
+
+    const roles = [];
+
+    for (const [shift, names] of Object.entries(shiftGroups)) {
+      if (names.includes(name)) {
+        roles.push(shift);
       }
     }
+
+    const roleText = roles.length ? roles.join(" • ") : "-";
+
+    table.insertAdjacentHTML("beforeend", `
+      <tr class="offline">
+        <td>${escapeHtml(name)}</td>
+        <td>${roleText}</td>
+        <td>🔴 Offline</td>
+      </tr>
+    `);
   }
+ }
 }
 
 // === FETCH + RENDER CYCLE ===
