@@ -4,7 +4,7 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkQmk1EPkEaJKZ
 
 // Manual Staff group (edit this in code)
 const manualStaffGroup = {
-  "Staff": ["泣くオオカミ", "_ROVER_", "Kingh8_Fury", "Frog", "Zero", "GhostFreak", "A1"]
+  "Staff": ["泣くオオカミ", "_ROVER_", "Kingh8_Fury", "Frog", "Zero", "GhostFreak", "A1", "KiUHA"]
 };
 
 // === UTIL ===
