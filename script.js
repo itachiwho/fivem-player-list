@@ -2,11 +2,6 @@
 const PLAYERS_API = "https://fivem-proxy-five.vercel.app/api/players";
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkQmk1EPkEaJKZ8YlrCd89-66e55TgACGPIe11KgLYs3WIv80JY62_d6BJhQ-xNoIpiQTyrY8Pxn27/pub?gid=0&single=true&output=csv";
 
-// Manual Staff group (edit this in code)
-const manualStaffGroup = {
-  "Staff": ["泣くオオカミ", "_ROVER_", "Kingh8_Fury", "Frog", "Zero", "GhostFreak", "A1", "KiUHA"]
-};
-
 // === UTIL ===
 function stripColorCodes(name = "") {
   return name.replace(/\^([0-9])/g, "").trim();
@@ -93,25 +88,26 @@ async function fetchShiftGroups() {
     const rows = parseCsv(csvText);
     const dataRows = rows.slice(6); // skip header rows as in your sheet
 
-    const groups = { "Shift-1": [], "Shift-2": [], "Full Shift": [] };
+    const groups = { "Shift-1": [], "Shift-2": [], "Full Shift": [], "Staff": [] };
 
     for (const row of dataRows) {
-      const s1 = (row[3]  || "").trim();
-      const s2 = (row[8]  || "").trim();
-      const s3 = (row[13] || "").trim();
+      const s1 = (row[3]  || "").trim();  // Column D
+      const s2 = (row[8]  || "").trim();  // Column I
+      const s3 = (row[13] || "").trim();  // Column N
+      const s4 = (row[19] || "").trim();  // Column T (Staff)
 
       if (s1) groups["Shift-1"].push(s1);
       if (s2) groups["Shift-2"].push(s2);
       if (s3) groups["Full Shift"].push(s3);
+      if (s4) groups["Staff"].push(s4);
     }
 
-    const combined = { ...groups, ...manualStaffGroup };
-    console.log("✅ Loaded shift groups from Google Sheet:", combined);
-    return combined;
+    console.log("✅ Loaded shift groups from Google Sheet:", groups);
+    return groups;
 
   } catch (err) {
     console.error("❌ Failed to load shift groups:", err);
-    return manualStaffGroup;
+    return { "Shift-1": [], "Shift-2": [], "Full Shift": [], "Staff": [] };
   }
 }
 
@@ -198,15 +194,15 @@ function renderPlayers() {
 
   filtered.forEach((p, i) => {
     const clean = stripColorCodes(p?.name || "");
-const roles = [];
+    const roles = [];
 
-for (const [shift, set] of Object.entries(shiftSets)) {
-  if (set.has(clean)) {
-    roles.push(shift);
-  }
-}
+    for (const [shift, set] of Object.entries(shiftSets)) {
+      if (set.has(clean)) {
+        roles.push(shift);
+      }
+    }
     
-const role = roles.length ? roles.join(" • ") : "-";
+    const role = roles.length ? roles.join(" • ") : "-";
     table.insertAdjacentHTML("beforeend", `
       <tr>
         <td>${i + 1}</td>
@@ -234,28 +230,28 @@ function renderOffline() {
 
   const online = new Set(lastPlayers.map((p) => stripColorCodes(p?.name || "")));
 
-for (const name of new Set(Object.values(shiftGroups).flat())) {
-  if (!online.has(name)) {
+  for (const name of new Set(Object.values(shiftGroups).flat())) {
+    if (!online.has(name)) {
 
-    const roles = [];
+      const roles = [];
 
-    for (const [shift, names] of Object.entries(shiftGroups)) {
-      if (names.includes(name)) {
-        roles.push(shift);
+      for (const [shift, names] of Object.entries(shiftGroups)) {
+        if (names.includes(name)) {
+          roles.push(shift);
+        }
       }
+
+      const roleText = roles.length ? roles.join(" • ") : "-";
+
+      table.insertAdjacentHTML("beforeend", `
+        <tr class="offline">
+          <td>${escapeHtml(name)}</td>
+          <td>${roleText}</td>
+          <td>🔴 Offline</td>
+        </tr>
+      `);
     }
-
-    const roleText = roles.length ? roles.join(" • ") : "-";
-
-    table.insertAdjacentHTML("beforeend", `
-      <tr class="offline">
-        <td>${escapeHtml(name)}</td>
-        <td>${roleText}</td>
-        <td>🔴 Offline</td>
-      </tr>
-    `);
   }
- }
 }
 
 // === FETCH + RENDER CYCLE ===
@@ -286,7 +282,7 @@ async function loadPlayers() {
     if (lastPlayers.length) {
       // Show warning with timestamp when falling back to cached data
       const ts = lastUpdated ? lastUpdated : "N/A";
-      showWarning(`⚠ Couldn’t update, showing last data — last updated at ${ts}`);
+      showWarning(`⚠ Couldn't update, showing last data — last updated at ${ts}`);
       setMeta(lastMeta.hostname, lastMeta.max);
       renderPlayers();
       renderOffline();
